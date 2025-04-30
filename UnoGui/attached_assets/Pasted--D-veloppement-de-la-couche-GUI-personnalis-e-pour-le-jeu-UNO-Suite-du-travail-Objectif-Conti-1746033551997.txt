@@ -1,0 +1,452 @@
+# Développement de la couche GUI personnalisée pour le jeu UNO - Suite du travail
+
+## Objectif
+Continuer le développement de la couche d'abstraction GUI déjà commencée (préfixée par "D") et finaliser l'implémentation du jeu UNO graphique.
+
+## Tâches prioritaires
+
+### 1. Amélioration de la couche d'abstraction GUI (dgui)
+
+#### 1.1 Compléter les composants existants
+- Ajouter toutes les méthodes manquantes dans `DComponent` comme `setPreferredSize`
+- S'assurer que tous les composants peuvent être redimensionnés correctement
+- Implémenter correctement les méthodes de peinture dans `DPanel` et autres composants visuels
+
+```java
+// Exemple d'ajout de méthodes manquantes à DComponent
+public void setPreferredSize(Dimension dimension) {
+    component.setPreferredSize(dimension);
+}
+
+public Dimension getPreferredSize() {
+    return component.getPreferredSize();
+}
+
+public void setMinimumSize(Dimension dimension) {
+    component.setMinimumSize(dimension);
+}
+
+public void setMaximumSize(Dimension dimension) {
+    component.setMaximumSize(dimension);
+}
+```
+
+#### 1.2 Améliorer la classe DCard
+- Améliorer le rendu visuel des cartes UNO avec des coins arrondis
+- Ajouter des symboles distinctifs pour les cartes spéciales (Skip, Reverse, etc.)
+- Implémenter une animation simple lorsqu'une carte est jouée
+
+```java
+// Exemple d'amélioration pour DCard
+public class DCard extends DComponent {
+    private CardColor cardColor;
+    private CardValue cardValue;
+    private boolean highlighted = false;
+    
+    public DCard(CardColor cardColor, CardValue cardValue) {
+        super(new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Fond de la carte avec coins arrondis
+                RoundRectangle2D roundedRectangle = new RoundRectangle2D.Float(
+                    2, 2, getWidth() - 4, getHeight() - 4, 20, 20);
+                g2d.setColor(cardColor.getAwtColor());
+                g2d.fill(roundedRectangle);
+                
+                // Bordure
+                g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
+                g2d.draw(roundedRectangle);
+                
+                // Cercle blanc au centre avec symbole
+                g2d.setColor(Color.WHITE);
+                g2d.fillOval(getWidth()/4, getHeight()/4, getWidth()/2, getHeight()/2);
+                
+                // Symbole
+                g2d.setColor(cardColor.getAwtColor());
+                Font symbolFont = new Font("Arial", Font.BOLD, 24);
+                g2d.setFont(symbolFont);
+                FontMetrics fm = g2d.getFontMetrics();
+                String symbol = cardValue.getSymbol();
+                int textWidth = fm.stringWidth(symbol);
+                int textHeight = fm.getHeight();
+                g2d.drawString(symbol, 
+                              (getWidth() - textWidth) / 2,
+                              getHeight()/2 + textHeight/4);
+                
+                // Petits symboles dans les coins
+                g2d.setFont(new Font("Arial", Font.BOLD, 12));
+                g2d.drawString(symbol, 5, 15);
+                g2d.drawString(symbol, getWidth() - 15, getHeight() - 5);
+                
+                // Highlight si la carte est sélectionnée
+                if (highlighted) {
+                    g2d.setColor(new Color(255, 255, 0, 100)); // jaune semi-transparent
+                    g2d.fill(roundedRectangle);
+                }
+            }
+        });
+        
+        this.cardColor = cardColor;
+        this.cardValue = cardValue;
+        
+        setPreferredSize(new Dimension(80, 120));
+    }
+    
+    public void setHighlighted(boolean highlighted) {
+        this.highlighted = highlighted;
+        component.repaint();
+    }
+    
+    // Autres méthodes...
+}
+```
+
+#### 1.3 Ajouter un système d'événements plus complet
+- Améliorer la classe `DActionEvent` et l'interface `DActionListener`
+- Ajouter des événements pour les clics de souris, le survol, etc.
+- Implémenter un gestionnaire d'événements pour les cartes jouables
+
+```java
+// Exemple d'événements de souris personnalisés
+public class DMouseEvent {
+    private Object source;
+    private int x, y;
+    private int button;
+    
+    public DMouseEvent(Object source, int x, int y, int button) {
+        this.source = source;
+        this.x = x;
+        this.y = y;
+        this.button = button;
+    }
+    
+    // Getters...
+}
+
+public interface DMouseListener {
+    void mouseClicked(DMouseEvent event);
+    void mousePressed(DMouseEvent event);
+    void mouseReleased(DMouseEvent event);
+    void mouseEntered(DMouseEvent event);
+    void mouseExited(DMouseEvent event);
+}
+```
+
+### 2. Amélioration de l'interface du jeu UNO
+
+#### 2.1 Améliorer la disposition des cartes
+- Implémenter un layout personnalisé pour afficher les cartes en éventail
+- S'assurer que les cartes se chevauchent correctement lorsqu'il y en a beaucoup dans la main
+
+```java
+// Exemple de DHandLayout
+public class DHandLayout extends DLayoutManager {
+    private int overlap = 30; // pixels de chevauchement
+    
+    public DHandLayout() {
+        super(new FlowLayout());
+    }
+    
+    @Override
+    public void layoutContainer(Container parent) {
+        synchronized (parent.getTreeLock()) {
+            int n = parent.getComponentCount();
+            if (n == 0) return;
+            
+            int availableWidth = parent.getWidth();
+            int cardWidth = parent.getComponent(0).getPreferredSize().width;
+            int cardHeight = parent.getComponent(0).getPreferredSize().height;
+            
+            // Calculer le chevauchement en fonction du nombre de cartes
+            if (n > 1) {
+                int maxWidth = cardWidth + (n - 1) * (cardWidth - overlap);
+                if (maxWidth > availableWidth) {
+                    overlap = cardWidth - (availableWidth - cardWidth) / (n - 1);
+                }
+            }
+            
+            int x = 0;
+            for (int i = 0; i < n; i++) {
+                Component c = parent.getComponent(i);
+                c.setBounds(x, 0, cardWidth, cardHeight);
+                x += (cardWidth - overlap);
+            }
+        }
+    }
+}
+```
+
+#### 2.2 Implémenter le choix de couleur pour les cartes Wild
+- Créer un dialogue personnalisé pour choisir la couleur après avoir joué une carte Wild
+- Utiliser des composants de la couche DGui pour la cohérence
+
+```java
+// Exemple de DColorChooserDialog
+public class DColorChooserDialog extends DPanel {
+    private CardColor selectedColor = null;
+    private boolean colorSelected = false;
+    
+    public DColorChooserDialog() {
+        super(DLayoutManager.createGridLayout(2, 2));
+        
+        DButton redButton = new DButton("Rouge");
+        redButton.setBackground(Color.RED);
+        redButton.addActionListener(e -> {
+            selectedColor = CardColor.RED;
+            colorSelected = true;
+        });
+        
+        DButton blueButton = new DButton("Bleu");
+        blueButton.setBackground(Color.BLUE);
+        blueButton.addActionListener(e -> {
+            selectedColor = CardColor.BLUE;
+            colorSelected = true;
+        });
+        
+        DButton greenButton = new DButton("Vert");
+        greenButton.setBackground(Color.GREEN);
+        greenButton.addActionListener(e -> {
+            selectedColor = CardColor.GREEN;
+            colorSelected = true;
+        });
+        
+        DButton yellowButton = new DButton("Jaune");
+        yellowButton.setBackground(Color.YELLOW);
+        yellowButton.addActionListener(e -> {
+            selectedColor = CardColor.YELLOW;
+            colorSelected = true;
+        });
+        
+        add(redButton);
+        add(blueButton);
+        add(greenButton);
+        add(yellowButton);
+    }
+    
+    public CardColor getSelectedColor() {
+        return selectedColor;
+    }
+    
+    public boolean isColorSelected() {
+        return colorSelected;
+    }
+}
+```
+
+#### 2.3 Ajouter des effets visuels et animations
+- Implémentation d'animations simples pour jouer et piocher des cartes
+- Effet visuel pour indiquer le changement de sens (pour les cartes Reverse)
+- Animation pour les cartes Skip et Draw Two/Four
+
+```java
+// Exemple d'animation pour DCard
+public void animatePlay(Point destination) {
+    final Point startLocation = component.getLocation();
+    final int steps = 20;
+    final Timer timer = new Timer(20, null);
+    final AtomicInteger step = new AtomicInteger(0);
+    
+    timer.addActionListener(e -> {
+        if (step.get() >= steps) {
+            timer.stop();
+            component.setLocation(destination);
+        } else {
+            int x = startLocation.x + (destination.x - startLocation.x) * step.get() / steps;
+            int y = startLocation.y + (destination.y - startLocation.y) * step.get() / steps;
+            component.setLocation(x, y);
+            step.incrementAndGet();
+        }
+    });
+    
+    timer.start();
+}
+```
+
+### 3. Amélioration de la logique du jeu
+
+#### 3.1 Implémenter complètement les règles du UNO
+- S'assurer que toutes les cartes spéciales fonctionnent correctement
+- Implémenter la possibilité de crier "UNO" quand un joueur n'a plus qu'une carte
+- Ajouter des pénalités pour ne pas avoir crié "UNO"
+
+```java
+// Exemple d'implémentation pour le bouton "UNO"
+public class GameWindow {
+    private DButton unoButton;
+    
+    private void initializeUI() {
+        // ...
+        
+        unoButton = new DButton("UNO!");
+        unoButton.setEnabled(false);
+        unoButton.addActionListener(e -> {
+            game.declareUno(game.getCurrentPlayer());
+        });
+        
+        // ...
+    }
+    
+    private void updateUI() {
+        // ...
+        
+        // Activer le bouton UNO seulement si le joueur actuel a deux cartes
+        unoButton.setEnabled(game.getCurrentPlayer().getHand().size() == 2);
+        
+        // ...
+    }
+}
+```
+
+#### 3.2 Gérer correctement la fin de partie
+- Implémenter un écran de fin de partie montrant le gagnant
+- Afficher les scores de chaque joueur
+- Proposer de rejouer une partie ou de quitter
+
+```java
+// Exemple d'écran de fin de partie
+public class GameOverPanel extends DPanel {
+    public GameOverPanel(Player winner, List<Player> allPlayers) {
+        super(DLayoutManager.createBorderLayout());
+        
+        DLabel winnerLabel = new DLabel(winner.getName() + " a gagné la partie!");
+        winnerLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        add(winnerLabel, BorderLayout.NORTH);
+        
+        DPanel scoresPanel = new DPanel(DLayoutManager.createGridLayout(allPlayers.size(), 2));
+        for (Player player : allPlayers) {
+            DLabel nameLabel = new DLabel(player.getName());
+            DLabel scoreLabel = new DLabel("Score: " + calculateScore(player.getHand()));
+            scoresPanel.add(nameLabel);
+            scoresPanel.add(scoreLabel);
+        }
+        add(scoresPanel, BorderLayout.CENTER);
+        
+        DPanel buttonsPanel = new DPanel(DLayoutManager.createFlowLayout());
+        DButton playAgainButton = new DButton("Rejouer");
+        DButton quitButton = new DButton("Quitter");
+        buttonsPanel.add(playAgainButton);
+        buttonsPanel.add(quitButton);
+        add(buttonsPanel, BorderLayout.SOUTH);
+    }
+    
+    private int calculateScore(List<Card> hand) {
+        int score = 0;
+        for (Card card : hand) {
+            switch (card.getValue()) {
+                case SKIP:
+                case REVERSE:
+                case DRAW_TWO:
+                    score += 20;
+                    break;
+                case WILD:
+                case WILD_DRAW_FOUR:
+                    score += 50;
+                    break;
+                default:
+                    int value = Integer.parseInt(card.getValue().getSymbol());
+                    score += value;
+                    break;
+            }
+        }
+        return score;
+    }
+}
+```
+
+### 4. Documentation et tests
+
+#### 4.1 Documenter complètement le code
+- Ajouter des commentaires JavaDoc à toutes les classes et méthodes
+- Expliquer clairement l'architecture de la couche d'abstraction GUI
+- Documenter les décisions de conception importantes
+
+```java
+/**
+ * Représente un composant de base dans le framework DGui.
+ * Tous les composants visuels héritent de cette classe.
+ * Elle encapsule un composant Swing standard et fournit
+ * des fonctionnalités communes.
+ */
+public class DComponent {
+    // ...
+}
+```
+
+#### 4.2 Ajouter des tests unitaires
+- Tester les composants de la couche d'abstraction GUI
+- Tester la logique du jeu UNO
+- S'assurer que les règles du jeu sont correctement implémentées
+
+## Organisation des fichiers
+
+```
+src/
+├── dgui/                  # Couche d'abstraction GUI
+│   ├── DComponent.java
+│   ├── DButton.java
+│   ├── DLabel.java
+│   ├── DPanel.java
+│   ├── DFrame.java
+│   ├── DCard.java
+│   ├── DHandPanel.java
+│   ├── DDiscardPilePanel.java
+│   ├── DLayoutManager.java
+│   ├── DHandLayout.java
+│   ├── DBorder.java
+│   ├── DActionEvent.java
+│   ├── DActionListener.java
+│   ├── DMouseEvent.java
+│   ├── DMouseListener.java
+│   └── DColorChooserDialog.java
+├── uno/
+│   ├── core/              # Logique du jeu UNO
+│   │   ├── Card.java
+│   │   ├── CardColor.java
+│   │   ├── CardValue.java
+│   │   ├── Game.java
+│   │   └── Player.java
+│   ├── gui/               # Interface graphique du jeu
+│   │   ├── GameWindow.java
+│   │   ├── GameInfoPanel.java
+│   │   ├── PlayerHandPanel.java
+│   │   ├── TablePanel.java
+│   │   └── GameOverPanel.java
+│   └── UnoGame.java       # Classe principale
+└── test/                  # Tests unitaires
+    ├── dgui/
+    └── uno/
+```
+
+## Rappel des exigences importantes
+
+1. **Séparation des préoccupations**:
+   - La couche d'abstraction GUI doit être complètement séparée de la logique du jeu
+   - L'implémentation du jeu UNO ne doit utiliser que la couche d'abstraction, pas Swing directement
+
+2. **Gestion correcte des layouts**:
+   - L'interface doit être redimensionnable
+   - Les composants doivent être organisés de manière cohérente à toutes les tailles
+
+3. **Qualité du code**:
+   - Code propre, bien organisé et documenté
+   - Application correcte des principes de la POO
+   - Séparation claire entre le framework et l'implémentation
+
+4. **Vidéo de démonstration et documentation**:
+   - Une vidéo de 5-7 minutes montrant l'application en action
+   - Documentation expliquant l'architecture de la couche GUI personnalisée
+
+## Conseils pour l'implémentation
+
+1. Commencez par vous assurer que tous les composants de base fonctionnent correctement
+2. Concentrez-vous ensuite sur l'apparence visuelle des cartes UNO
+3. Améliorez la disposition des cartes avec un layout personnalisé
+4. Ajoutez des animations et effets visuels une fois que la base fonctionne bien
+5. Testez régulièrement votre application pour détecter les bugs et les problèmes
+
+Bon développement !

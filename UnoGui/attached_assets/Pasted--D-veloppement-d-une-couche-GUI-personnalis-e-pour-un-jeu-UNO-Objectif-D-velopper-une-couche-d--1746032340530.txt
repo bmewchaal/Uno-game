@@ -1,0 +1,245 @@
+# Développement d'une couche GUI personnalisée pour un jeu UNO
+
+## Objectif
+Développer une couche d'abstraction GUI personnalisée par-dessus Java Swing, puis implémenter un jeu UNO graphique en utilisant uniquement cette couche personnalisée. La couche doit être préfixée par "D" (ex: DButton pour JButton).
+
+## Structure du projet
+Créer un projet Java avec les packages suivants:
+
+### 1. Package `dgui` - Couche d'abstraction GUI
+Ce package contiendra tous les composants de notre couche personnalisée. Chaque composant doit encapsuler un composant Swing correspondant avec le préfixe "D".
+
+### 2. Package `uno.core` - Logique du jeu UNO
+Ce package contiendra les classes qui implémentent la logique du jeu UNO (cartes, joueurs, règles, etc.)
+
+### 3. Package `uno.gui` - Interface graphique du jeu UNO
+Ce package contiendra l'implémentation graphique du jeu utilisant uniquement la couche `dgui`.
+
+## Étapes de développement
+
+### Phase 1: Développement de la couche d'abstraction GUI (`dgui`)
+
+#### 1.1 Composants de base
+Créer les classes suivantes:
+
+```java
+// Composant de base dont tous les autres composants hériteront
+public class DComponent {
+    protected JComponent component;
+    
+    // Méthodes communes à tous les composants (getSize, setSize, setVisible, etc.)
+}
+
+// Fenêtre principale
+public class DFrame extends DComponent {
+    private JFrame frame;
+    
+    // Constructeurs et méthodes pour gérer la fenêtre
+}
+
+// Bouton personnalisé
+public class DButton extends DComponent {
+    private JButton button;
+    
+    // Constructeurs et méthodes pour gérer le bouton
+}
+
+// Label personnalisé
+public class DLabel extends DComponent {
+    private JLabel label;
+    
+    // Constructeurs et méthodes pour gérer le label
+}
+
+// Panel personnalisé
+public class DPanel extends DComponent {
+    private JPanel panel;
+    
+    // Constructeurs et méthodes pour gérer le panel
+}
+```
+
+#### 1.2 Composants pour les cartes
+
+```java
+// Composant pour afficher une carte UNO
+public class DCard extends DComponent {
+    private Color cardColor;
+    private String cardValue;
+    
+    // Méthodes pour dessiner et gérer la carte
+}
+
+// Zone d'affichage pour les cartes du joueur
+public class DHandPanel extends DPanel {
+    // Méthodes pour afficher et gérer les cartes du joueur
+}
+
+// Zone d'affichage pour la pile de défausse
+public class DDiscardPilePanel extends DPanel {
+    // Méthodes pour afficher et gérer la pile de défausse
+}
+```
+
+#### 1.3 Gestionnaires de layout personnalisés
+
+```java
+// Gestionnaire de layout pour disposer les composants
+public class DLayoutManager {
+    // Méthodes pour disposer les composants
+}
+
+// Layout spécifique pour les cartes en main
+public class DHandLayout extends DLayoutManager {
+    // Méthodes pour disposer les cartes en éventail
+}
+```
+
+#### 1.4 Gestionnaire d'événements
+
+```java
+// Interface pour la gestion des événements
+public interface DActionListener {
+    void actionPerformed(DActionEvent event);
+}
+
+// Événement personnalisé
+public class DActionEvent {
+    private Object source;
+    
+    // Méthodes pour gérer l'événement
+}
+```
+
+### Phase 2: Implémentation du jeu UNO
+
+#### 2.1 Modèle du jeu UNO (`uno.core`)
+
+```java
+// Énumération des couleurs de cartes
+public enum CardColor {
+    RED, BLUE, GREEN, YELLOW, WILD
+}
+
+// Énumération des valeurs de cartes
+public enum CardValue {
+    ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, 
+    SKIP, REVERSE, DRAW_TWO, WILD, WILD_DRAW_FOUR
+}
+
+// Classe représentant une carte UNO
+public class Card {
+    private CardColor color;
+    private CardValue value;
+    
+    // Constructeurs et méthodes
+}
+
+// Classe représentant un joueur
+public class Player {
+    private String name;
+    private List<Card> hand;
+    
+    // Constructeurs et méthodes
+}
+
+// Classe principale pour la logique du jeu
+public class Game {
+    private List<Player> players;
+    private List<Card> deck;
+    private List<Card> discardPile;
+    private int currentPlayerIndex;
+    private boolean isClockwise;
+    
+    // Constructeurs et méthodes pour gérer la logique du jeu
+}
+```
+
+#### 2.2 Interface graphique du jeu UNO (`uno.gui`)
+
+```java
+// Fenêtre principale du jeu
+public class GameWindow {
+    private DFrame frame;
+    private Game game;
+    
+    // Initialisation de l'interface
+    private void initializeUI() {
+        // Utiliser uniquement les composants de dgui
+    }
+}
+
+// Panneau pour afficher les informations du jeu
+public class GameInfoPanel extends DPanel {
+    // Affichage des informations du jeu (joueur actuel, direction, etc.)
+}
+
+// Panneau pour afficher la main du joueur
+public class PlayerHandPanel extends DHandPanel {
+    // Affichage des cartes du joueur
+}
+
+// Panneau pour afficher la pile de défausse et la pioche
+public class TablePanel extends DPanel {
+    // Affichage du centre de la table
+}
+```
+
+### Phase 3: Intégration et tests
+
+#### 3.1 Classe principale pour lancer le jeu
+
+```java
+public class UnoGame {
+    public static void main(String[] args) {
+        // Initialisation du jeu
+        Game game = new Game();
+        
+        // Initialisation de l'interface graphique
+        GameWindow window = new GameWindow(game);
+        
+        // Démarrage du jeu
+        game.start();
+    }
+}
+```
+
+## Fonctionnalités à implémenter
+
+1. **Affichage du jeu**:
+   - Affichage de la main du joueur
+   - Affichage de la pile de défausse
+   - Affichage des informations du jeu (joueur actuel, direction, etc.)
+
+2. **Interactions**:
+   - Sélection et jeu de cartes par clic de souris
+   - Pioche de cartes
+   - Annonce "UNO" quand le joueur n'a plus qu'une carte
+
+3. **Logique du jeu**:
+   - Respect des règles du UNO (correspondance de couleur ou de valeur)
+   - Gestion des cartes spéciales (Skip, Reverse, Draw Two, Wild, Wild Draw Four)
+   - Détection de la victoire
+   - Gestion des joueurs IA (simulation simple)
+
+## Conseils de développement
+
+1. Commencer par développer la couche d'abstraction `dgui` avec les composants de base.
+2. Implémenter ensuite les classes du modèle UNO.
+3. Développer l'interface graphique en utilisant uniquement les composants de la couche `dgui`.
+4. Intégrer la logique du jeu avec l'interface graphique.
+5. Tester régulièrement pour s'assurer que tout fonctionne correctement.
+
+## Spécifications techniques
+
+- N'utiliser aucun constructeur GUI de type drag-and-drop
+- Tous les composants doivent être créés et gérés programmatiquement
+- L'interface doit être redimensionnable grâce à une gestion appropriée des layouts
+- Les composants Swing ne doivent jamais être utilisés directement dans le package `uno.gui`
+
+## Livrables
+
+1. **Code source complet** avec structure de packages claire
+2. **Documentation** expliquant l'architecture de la couche GUI personnalisée
+3. **Vidéo de démonstration** montrant le jeu en action (5-7 minutes)
+4. **Réflexion** sur les défis rencontrés pendant le développement

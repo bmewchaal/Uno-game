@@ -1,0 +1,88 @@
+modules = ["java"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["jdk"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "UNO Game"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "uno-game"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "UNO Wood Demo"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "UNO Wood Game"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "UNO Complete"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "UNO Pure DGUI"
+
+[[workflows.workflow]]
+name = "UNO Game"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd src && javac -d ../bin dgui/*.java dgui/themes/*.java uno/core/*.java uno/gui/*.java uno/UnoGame.java && java -cp ../bin uno.UnoGame"
+
+[[workflows.workflow]]
+name = "uno-game"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd src && javac uno/UnoGame.java && java uno.UnoGame"
+
+[[workflows.workflow]]
+name = "UNO Wood Demo"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd src && javac -d ../bin dgui/*.java dgui/themes/*.java uno/core/*.java uno/gui/*.java uno/UnoWoodDemo.java && java -cp ../bin uno.UnoWoodDemo"
+
+[[workflows.workflow]]
+name = "UNO Wood Game"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd src && javac -d ../bin dgui/*.java dgui/themes/*.java uno/core/*.java uno/gui/*.java uno/UnoWoodGame.java && java -cp ../bin uno.UnoWoodGame"
+
+[[workflows.workflow]]
+name = "UNO Complete"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd src && javac -d ../bin dgui/*.java dgui/themes/*.java uno/core/*.java uno/gui/*.java uno/UnoWoodComplete.java && java -cp ../bin uno.UnoWoodComplete"
+
+[[workflows.workflow]]
+name = "UNO Pure DGUI"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd src && javac -d ../bin dgui/*.java dgui/themes/*.java uno/core/*.java uno/gui/*.java uno/UnoCompleteDGUI.java && java -cp ../bin uno.UnoCompleteDGUI"
+
+[deployment]
+run = ["sh", "-c", "cd src && javac -d ../bin dgui/*.java dgui/themes/*.java uno/core/*.java uno/gui/*.java uno/UnoGame.java && java -cp ../bin uno.UnoGame"]
