@@ -10,7 +10,6 @@ import uno.core.Card;
 import uno.core.CardColor;
 import uno.core.CardValue;
 import uno.core.Game;
-import uno.core.GameEventAdapter;
 import uno.core.Player;
 
 import java.awt.BorderLayout;
@@ -33,9 +32,11 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
+import javax.swing.Timer;
 
 /**
- * Panneau principal du jeu UNO avec une interface en bois
+ * Enhanced game panel with wood texture and improved UI
+ * Fixes dimension issues and enhances visual appearance
  */
 public class DWoodGamePanel extends DWoodPanel {
     private Game game;
@@ -43,11 +44,11 @@ public class DWoodGamePanel extends DWoodPanel {
     private Map<Player, List<DUnoCard>> aiPlayerCards = new HashMap<>();
     private Map<String, DPanel> playerPanels = new HashMap<>();
     
-    // Cartes communes
+    // Game cards
     private DUnoCard topCard;
     private DUnoCard deckCard;
     
-    // Panneaux d'organisation
+    // Layout panels
     private DPanel centerPanel;
     private DPanel playerPanel;
     private DPanel controlPanel;
@@ -55,7 +56,7 @@ public class DWoodGamePanel extends DWoodPanel {
     private DPanel leftPlayerPanel;
     private DPanel rightPlayerPanel;
     
-    // Contrôles du jeu
+    // Game controls
     private DButton drawButton;
     private DButton playButton;
     private DButton unoButton;
@@ -65,17 +66,20 @@ public class DWoodGamePanel extends DWoodPanel {
     private DButton colorYellowButton;
     private DPanel colorSelectionPanel;
     
-    // Indicateurs
+    // Game status indicators
     private DLabel turnIndicator;
     private DLabel gameStatus;
     
-    // État du jeu
+    // Game state
     private boolean waitingForColorSelection = false;
     private DUnoCard selectedCard = null;
     private CardColor selectedWildColor = null;
     
+    // Animation constants
+    private static final int ANIMATION_DURATION = 300;
+    
     /**
-     * Crée un nouveau panneau de jeu UNO en bois
+     * Create a new enhanced wood game panel
      */
     public DWoodGamePanel(Game game) {
         super(new BorderLayout(10, 10));
@@ -87,41 +91,42 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Initialise l'interface utilisateur
+     * Initialize the UI
      */
     private void initUI() {
-        // Configurer le panneau principal avec une texture en bois
-        createWoodTexture(LIGHT_WOOD);
+        // Configure main panel with wood texture
+        createWoodTexture(DARK_WOOD);
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        // Créer les panneaux d'organisation
+        // First, create the panels with explicit sizes to avoid 0x0 dimensions
         createCenterPanel();
         createPlayerPanel();
         createControlPanel();
         createColorSelectionPanel();
         
-        // Ajouter les panneaux au panneau principal
+        // Add panels to main layout
         add(centerPanel, BorderLayout.CENTER);
         add(playerPanel, BorderLayout.SOUTH);
         add(controlPanel, BorderLayout.EAST);
         
-        // Initialiser les cartes visibles
+        // Initialize visible cards
         updateTopCard();
         updateDeckCard();
     }
     
     /**
-     * Crée le panneau central du jeu
+     * Create the center game panel
      */
     private void createCenterPanel() {
         centerPanel = new DPanel(new BorderLayout(20, 20));
         centerPanel.setOpaque(false);
+        centerPanel.setPreferredSize(new Dimension(600, 400)); // Explicit size
         
-        // Carte jouée au centre
+        // Card played at center
         JPanel cardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         cardPanel.setOpaque(false);
         
-        // Créer une carte initiale en attendant que le jeu soit configuré
+        // Create initial card
         Card initialCard = game.getTopCard();
         if (initialCard == null) {
             initialCard = new Card(CardColor.RED, CardValue.ZERO);
@@ -129,22 +134,22 @@ public class DWoodGamePanel extends DWoodPanel {
         topCard = new DUnoCard(initialCard);
         cardPanel.add(topCard.getComponent());
         
-        // Pioche à côté
+        // Draw pile next to discard pile
         JPanel deckPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         deckPanel.setOpaque(false);
-        deckCard = new DUnoCard(new Card(CardColor.WILD, CardValue.WILD)); // Utiliser WILD au lieu de null
+        deckCard = new DUnoCard(new Card(CardColor.WILD, CardValue.WILD));
         deckCard.setFaceUp(false);
         deckPanel.add(deckCard.getComponent());
         
-        // Indicateur de tour
-        turnIndicator = new DLabel("C'est à vous de jouer!");
+        // Turn indicator
+        turnIndicator = new DLabel("It's your turn!");
         turnIndicator.setFont(new Font("Arial", Font.BOLD, 16));
         turnIndicator.setForeground(Color.WHITE);
         JPanel turnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         turnPanel.setOpaque(false);
         turnPanel.add(turnIndicator.getComponent());
         
-        // Status du jeu
+        // Game status
         gameStatus = new DLabel("");
         gameStatus.setFont(new Font("Arial", Font.ITALIC, 14));
         gameStatus.setForeground(Color.WHITE);
@@ -152,15 +157,15 @@ public class DWoodGamePanel extends DWoodPanel {
         statusPanel.setOpaque(false);
         statusPanel.add(gameStatus.getComponent());
         
-        // Bouton UNO
+        // UNO button
         unoButton = new DButton("Call UNO!");
-        unoButton.setBackground(new Color(0, 120, 255));
+        unoButton.setBackground(new Color(255, 60, 0)); // Bright orange-red
         unoButton.setForeground(Color.WHITE);
         JPanel unoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         unoPanel.setOpaque(false);
         unoPanel.add(unoButton.getComponent());
         
-        // Organisation
+        // Organize layout
         JPanel topInfoPanel = new JPanel();
         topInfoPanel.setOpaque(false);
         topInfoPanel.setLayout(new BoxLayout(topInfoPanel, BoxLayout.Y_AXIS));
@@ -172,38 +177,38 @@ public class DWoodGamePanel extends DWoodPanel {
         centerCardPanel.add(deckPanel, BorderLayout.EAST);
         centerCardPanel.add(cardPanel, BorderLayout.CENTER);
         
-        // Ajout des panneaux au panneau central
+        // Add panels to center panel
         centerPanel.add(topInfoPanel, BorderLayout.NORTH);
         centerPanel.add(centerCardPanel, BorderLayout.CENTER);
         centerPanel.add(unoPanel, BorderLayout.SOUTH);
         
-        // Ajouter des panneaux pour les autres joueurs
+        // Add AI player panels
         createAIPlayerPanels();
     }
     
     /**
-     * Crée les panneaux pour les joueurs IA
+     * Create AI player panels
      */
     private void createAIPlayerPanels() {
-        // Panneau pour le joueur du haut (en face)
-        topPlayerPanel = createAIPlayerPanel("Joueur Nord", BorderLayout.NORTH);
+        // Top player (across)
+        topPlayerPanel = createAIPlayerPanel("Forrest Gump", BorderLayout.NORTH);
         centerPanel.add(topPlayerPanel, BorderLayout.NORTH);
         
-        // Panneau pour le joueur de gauche
-        leftPlayerPanel = createAIPlayerPanel("Joueur Ouest", BorderLayout.WEST);
+        // Left player
+        leftPlayerPanel = createAIPlayerPanel("Daenerys Targaryen", BorderLayout.WEST);
         centerPanel.add(leftPlayerPanel, BorderLayout.WEST);
         
-        // Panneau pour le joueur de droite
-        rightPlayerPanel = createAIPlayerPanel("Joueur Est", BorderLayout.EAST);
+        // Right player
+        rightPlayerPanel = createAIPlayerPanel("Hannibal Lecter", BorderLayout.EAST);
         centerPanel.add(rightPlayerPanel, BorderLayout.EAST);
         
-        playerPanels.put("Nord", topPlayerPanel);
-        playerPanels.put("Ouest", leftPlayerPanel);
-        playerPanels.put("Est", rightPlayerPanel);
+        playerPanels.put("Forrest Gump", topPlayerPanel);
+        playerPanels.put("Daenerys Targaryen", leftPlayerPanel);
+        playerPanels.put("Hannibal Lecter", rightPlayerPanel);
     }
     
     /**
-     * Crée un panneau pour un joueur IA
+     * Create an AI player panel
      */
     private DPanel createAIPlayerPanel(String name, String position) {
         DPanel panel = new DPanel();
@@ -212,35 +217,38 @@ public class DWoodGamePanel extends DWoodPanel {
         boolean isHorizontal = position.equals(BorderLayout.NORTH) || position.equals(BorderLayout.SOUTH);
         
         if (isHorizontal) {
+            // Set explicit size for horizontal panels
+            panel.setPreferredSize(new Dimension(600, 120));
             panel.setLayout(new BoxLayout(panel.getPanel(), BoxLayout.Y_AXIS));
             
-            // Nom du joueur
+            // Player name
             DLabel playerName = new DLabel(name);
             playerName.setFont(new Font("Arial", Font.BOLD, 14));
             playerName.setForeground(Color.WHITE);
             panel.add(playerName);
             
-            // Place pour les cartes
+            // Card area
             JPanel cardsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -25, 0));
             cardsPanel.setOpaque(false);
             panel.add(cardsPanel);
             
         } else {
+            // Set explicit size for vertical panels
+            panel.setPreferredSize(new Dimension(120, 400));
             panel.setLayout(new BoxLayout(panel.getPanel(), BoxLayout.X_AXIS));
-            panel.setPreferredSize(new Dimension(100, 250));
             
-            // Organisation verticale
+            // Vertical organization
             DPanel verticalPanel = new DPanel();
             verticalPanel.setOpaque(false);
             verticalPanel.setLayout(new BoxLayout(verticalPanel.getPanel(), BoxLayout.Y_AXIS));
             
-            // Nom du joueur
+            // Player name
             DLabel playerName = new DLabel(name);
             playerName.setFont(new Font("Arial", Font.BOLD, 14));
             playerName.setForeground(Color.WHITE);
             verticalPanel.add(playerName);
             
-            // Place pour les cartes
+            // Card area
             JPanel cardsPanel = new JPanel();
             cardsPanel.setLayout(new BoxLayout(cardsPanel, BoxLayout.Y_AXIS));
             cardsPanel.setOpaque(false);
@@ -253,44 +261,45 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Crée le panneau du joueur humain
+     * Create human player panel
      */
     private void createPlayerPanel() {
         playerPanel = new DPanel();
         playerPanel.setOpaque(false);
+        playerPanel.setPreferredSize(new Dimension(800, 150)); // Explicit size
         playerPanel.setLayout(new BoxLayout(playerPanel.getPanel(), BoxLayout.Y_AXIS));
         
-        // Nom du joueur
-        DLabel playerName = new DLabel("Vous");
+        // Player name
+        DLabel playerName = new DLabel("TheLegend27");
         playerName.setFont(new Font("Arial", Font.BOLD, 14));
         playerName.setForeground(Color.WHITE);
         playerPanel.add(playerName);
         
-        // Cartes du joueur
+        // Player cards
         JPanel cardsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -15, 5));
         cardsPanel.setOpaque(false);
         playerPanel.add(cardsPanel);
     }
     
     /**
-     * Crée le panneau de contrôle
+     * Create control panel
      */
     private void createControlPanel() {
         controlPanel = new DPanel();
         controlPanel.setOpaque(false);
         controlPanel.setLayout(new BoxLayout(controlPanel.getPanel(), BoxLayout.Y_AXIS));
-        controlPanel.setPreferredSize(new Dimension(150, 300));
+        controlPanel.setPreferredSize(new Dimension(150, 400)); // Explicit size
         
-        // Boutons de contrôle
-        drawButton = new DButton("Piocher");
-        drawButton.setBackground(new Color(60, 120, 60));
+        // Control buttons
+        drawButton = new DButton("Draw Card");
+        drawButton.setBackground(new Color(60, 170, 60)); // Brighter green
         drawButton.setForeground(Color.WHITE);
         
-        playButton = new DButton("Jouer");
-        playButton.setBackground(new Color(60, 60, 160));
+        playButton = new DButton("Play Card");
+        playButton.setBackground(new Color(60, 100, 220)); // Brighter blue
         playButton.setForeground(Color.WHITE);
         
-        // Ajouter les boutons au panneau
+        // Add buttons to panel
         controlPanel.add(Box.createVerticalStrut(20));
         controlPanel.add(drawButton);
         controlPanel.add(Box.createVerticalStrut(10));
@@ -299,68 +308,72 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Crée le panneau de sélection de couleur pour les cartes WILD
+     * Create color selection panel for wild cards
      */
     private void createColorSelectionPanel() {
         colorSelectionPanel = new DPanel(new GridLayout(2, 2, 10, 10));
         colorSelectionPanel.setOpaque(false);
+        colorSelectionPanel.setPreferredSize(new Dimension(150, 150)); // Explicit size
         
-        // Boutons de couleur
-        colorRedButton = new DButton("Rouge");
+        // Color buttons with enhanced appearance
+        colorRedButton = new DButton("Red");
         colorRedButton.setBackground(new Color(220, 40, 30));
         colorRedButton.setForeground(Color.WHITE);
         
-        colorBlueButton = new DButton("Bleu");
+        colorBlueButton = new DButton("Blue");
         colorBlueButton.setBackground(new Color(30, 80, 200));
         colorBlueButton.setForeground(Color.WHITE);
         
-        colorGreenButton = new DButton("Vert");
+        colorGreenButton = new DButton("Green");
         colorGreenButton.setBackground(new Color(30, 180, 50));
         colorGreenButton.setForeground(Color.WHITE);
         
-        colorYellowButton = new DButton("Jaune");
+        colorYellowButton = new DButton("Yellow");
         colorYellowButton.setBackground(new Color(240, 200, 40));
         colorYellowButton.setForeground(Color.BLACK);
         
-        // Ajouter les boutons au panneau
+        // Add buttons to panel
         colorSelectionPanel.add(colorRedButton);
         colorSelectionPanel.add(colorBlueButton);
         colorSelectionPanel.add(colorGreenButton);
         colorSelectionPanel.add(colorYellowButton);
         
-        // Masquer initialement le panneau
+        // Initially hide the panel
         colorSelectionPanel.setVisible(false);
         controlPanel.add(colorSelectionPanel);
     }
     
     /**
-     * Configure les gestionnaires d'événements
+     * Set up event handlers
      */
     private void setupEventHandlers() {
-        // Gestionnaire pour le bouton Piocher
+        // Draw button handler
         drawButton.addActionListener(e -> {
             if (isPlayerTurn() && !game.isGameEnded()) {
                 Card drawnCard = game.drawCard(game.getCurrentPlayer());
                 updatePlayerHand();
                 
-                // Animations
+                // Get the latest card added to player's hand
                 DUnoCard latestCard = playerCards.get(playerCards.size() - 1);
                 Point deckPos = getComponentScreenPosition(deckCard);
                 Point handPos = getComponentScreenPosition(latestCard);
                 
-                // Animer la carte depuis la pioche jusqu'à la main
+                // Animate card draw
                 animateCardDraw(latestCard, deckPos, handPos);
                 
-                // Passer au tour suivant
+                // Play sound
+                playSound("card_draw");
+                
+                // Advance to next player
                 game.advanceToNextPlayer();
                 updateTurnIndicator();
             }
         });
         
-        // Gestionnaire pour le bouton Jouer
+        // Play button handler
         playButton.addActionListener(e -> {
             if (isPlayerTurn() && !game.isGameEnded() && selectedCard != null) {
-                // Vérifier si la carte peut être jouée
+                // Check if card can be played
                 Card cardToPlay = selectedCard.getCard();
                 
                 if (cardToPlay.canPlayOn(game.getTopCard())) {
@@ -372,24 +385,27 @@ public class DWoodGamePanel extends DWoodPanel {
                     
                     playSelectedCard();
                 } else {
-                    showMessage("Cette carte ne peut pas être jouée!");
+                    showMessage("This card cannot be played!");
                 }
             }
         });
         
-        // Gestionnaire pour le bouton UNO
+        // UNO button handler
         unoButton.addActionListener(e -> {
             if (isPlayerTurn() && !game.isGameEnded()) {
                 if (game.getCurrentPlayer().getHandSize() == 1) {
                     game.callUno(game.getCurrentPlayer());
-                    showMessage("Vous avez appelé UNO!");
+                    showMessage("You called UNO!");
+                    
+                    // Play sound
+                    playSound("uno_call");
                 } else {
-                    showMessage("Vous ne pouvez appeler UNO que lorsqu'il vous reste une seule carte!");
+                    showMessage("You can only call UNO when you have one card left!");
                 }
             }
         });
         
-        // Gestionnaires pour les boutons de sélection de couleur
+        // Color selection button handlers
         colorRedButton.addActionListener(e -> selectWildColor(CardColor.RED));
         colorBlueButton.addActionListener(e -> selectWildColor(CardColor.BLUE));
         colorGreenButton.addActionListener(e -> selectWildColor(CardColor.GREEN));
@@ -397,7 +413,7 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Sélectionne une couleur pour une carte WILD
+     * Select a color for a wild card
      */
     private void selectWildColor(CardColor color) {
         if (waitingForColorSelection && selectedCard != null) {
@@ -405,7 +421,7 @@ public class DWoodGamePanel extends DWoodPanel {
             colorSelectionPanel.setVisible(false);
             waitingForColorSelection = false;
             
-            // Mettre à jour la couleur de la carte
+            // Update card color
             Card cardToPlay = selectedCard.getCard();
             cardToPlay.setChosenColor(color);
             
@@ -414,29 +430,33 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Joue la carte sélectionnée
+     * Play the selected card
      */
     private void playSelectedCard() {
         if (selectedCard != null) {
             Card cardToPlay = selectedCard.getCard();
             
-            // Animer la carte depuis la main jusqu'au centre
+            // Animate card from hand to center
             Point handPos = getComponentScreenPosition(selectedCard);
             Point tablePos = getComponentScreenPosition(topCard);
             
             animateCardPlay(selectedCard, handPos, tablePos, () -> {
-                // Jouer la carte et mettre à jour l'interface
+                // Play the card and update UI
                 if (game.playCard(cardToPlay)) {
                     removeCardFromPlayerHand(selectedCard);
                     updateTopCard();
                     
-                    // Vérifier la fin du jeu
+                    // Play sound
+                    playSound("card_place");
+                    
+                    // Check for game end
                     if (game.getCurrentPlayer().getHandSize() == 0) {
-                        showMessage("Vous avez gagné!");
+                        showMessage("You win!");
+                        playSound("game_win");
                         return;
                     }
                     
-                    // Passer au tour suivant
+                    // Advance to next player
                     game.advanceToNextPlayer();
                     updateTurnIndicator();
                 }
@@ -445,36 +465,147 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Anime le tirage d'une carte
+     * Play a sound effect
+     */
+    private void playSound(String soundName) {
+        try {
+            // Try to play sound through SoundManager
+            SoundManager soundManager = new SoundManager();
+            soundManager.playSound(soundName);
+        } catch (Exception e) {
+            // Silently ignore sound errors
+        }
+    }
+    
+    /**
+     * Animate card draw from deck to hand
      */
     private void animateCardDraw(DUnoCard card, Point start, Point end) {
-        // Cacher la carte initialement
+        // Initially hide the card
         card.setVisible(false);
         
-        // Animation de la carte depuis la pioche
-        DAnimator.animateMove(card, start, end, DAnimator.DEFAULT_DURATION, (success) -> {
-            // Afficher la carte une fois l'animation terminée
-            card.setVisible(true);
+        // Create a temporary card for animation
+        DUnoCard animCard = new DUnoCard(new Card(CardColor.WILD, CardValue.WILD));
+        animCard.setFaceUp(false);
+        ((JPanel)centerPanel.getComponent()).add(animCard.getComponent());
+        
+        // Position at deck location
+        animCard.getComponent().setBounds(start.x, start.y, 
+                                         card.getComponent().getWidth(), 
+                                         card.getComponent().getHeight());
+        
+        // Animation timer
+        Timer timer = new Timer(16, null);
+        final int steps = ANIMATION_DURATION / 16;
+        final int[] step = {0};
+        
+        timer.addActionListener(e -> {
+            step[0]++;
+            float progress = (float)step[0] / steps;
             
-            // Animation de retournement
-            DAnimator.animateFlip(card, true, DAnimator.DEFAULT_DURATION, null);
-        });
-    }
-    
-    /**
-     * Anime le jeu d'une carte
-     */
-    private void animateCardPlay(DUnoCard card, Point start, Point end, Runnable onComplete) {
-        // Animation de la carte depuis la main jusqu'au centre
-        DAnimator.animateMove(card, start, end, DAnimator.DEFAULT_DURATION, (success) -> {
-            if (onComplete != null) {
-                onComplete.run();
+            // Apply easing function for smoother animation
+            float easedProgress = easeOutQuad(progress);
+            
+            // Calculate new position
+            int x = start.x + (int)((end.x - start.x) * easedProgress);
+            int y = start.y + (int)((end.y - start.y) * easedProgress);
+            
+            // If halfway through, flip the card
+            if (step[0] == steps / 2) {
+                animCard.setFaceUp(true);
+            }
+            
+            // Update position
+            animCard.getComponent().setLocation(x, y);
+            
+            // Animation complete
+            if (step[0] >= steps) {
+                ((Timer)e.getSource()).stop();
+                
+                // Remove animation card
+                ((JPanel)centerPanel.getComponent()).remove(animCard.getComponent());
+                
+                // Show the actual card in hand
+                card.setVisible(true);
+                
+                // Refresh display
+                centerPanel.revalidate();
+                centerPanel.repaint();
             }
         });
+        
+        timer.start();
     }
     
     /**
-     * Récupère la position d'un composant par rapport à l'écran
+     * Animate playing a card from hand to table
+     */
+    private void animateCardPlay(DUnoCard card, Point start, Point end, Runnable onComplete) {
+        // Create a temporary card for animation
+        DUnoCard animCard = new DUnoCard(card.getCard());
+        ((JPanel)centerPanel.getComponent()).add(animCard.getComponent());
+        
+        // Position at hand location
+        animCard.getComponent().setBounds(start.x, start.y, 
+                                         card.getComponent().getWidth(), 
+                                         card.getComponent().getHeight());
+        
+        // Hide original card during animation
+        card.setVisible(false);
+        
+        // Animation timer
+        Timer timer = new Timer(16, null);
+        final int steps = ANIMATION_DURATION / 16;
+        final int[] step = {0};
+        
+        timer.addActionListener(e -> {
+            step[0]++;
+            float progress = (float)step[0] / steps;
+            
+            // Apply easing function for smoother animation
+            float easedProgress = easeOutQuad(progress);
+            
+            // Calculate new position with slight arc
+            int x = start.x + (int)((end.x - start.x) * easedProgress);
+            
+            // Add an arc to the y movement (rise then fall)
+            float arcHeight = 50; // Max height of arc
+            float arcProgress = (float)(Math.sin(Math.PI * easedProgress));
+            int y = start.y + (int)((end.y - start.y) * easedProgress - arcHeight * arcProgress);
+            
+            // Update position
+            animCard.getComponent().setLocation(x, y);
+            
+            // Animation complete
+            if (step[0] >= steps) {
+                ((Timer)e.getSource()).stop();
+                
+                // Remove animation card
+                ((JPanel)centerPanel.getComponent()).remove(animCard.getComponent());
+                
+                // Complete the action
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+                
+                // Refresh display
+                centerPanel.revalidate();
+                centerPanel.repaint();
+            }
+        });
+        
+        timer.start();
+    }
+    
+    /**
+     * Ease-out quadratic function for smooth animation
+     */
+    private float easeOutQuad(float x) {
+        return 1 - (1 - x) * (1 - x);
+    }
+    
+    /**
+     * Get screen position of a component
      */
     private Point getComponentScreenPosition(DComponent component) {
         Point p = component.getComponent().getLocationOnScreen();
@@ -482,17 +613,15 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Met à jour la carte du dessus de la pile
+     * Update the top card display
      */
     private void updateTopCard() {
         Card newTopCard = game.getTopCard();
         
-        // Vérifier si la carte du dessus est null (peut arriver lors de l'initialisation)
+        // Handle null top card (can happen during initialization)
         if (newTopCard == null) {
-            // Créer une carte par défaut si aucune carte du dessus n'est disponible
             newTopCard = new Card(CardColor.RED, CardValue.ZERO);
             
-            // Si nous sommes en train d'initialiser le jeu, ne rien faire d'autre
             if (topCard == null) {
                 topCard = new DUnoCard(newTopCard);
                 return;
@@ -509,7 +638,7 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Met à jour la pioche
+     * Update the deck card display
      */
     private void updateDeckCard() {
         deckCard.setFaceUp(false);
@@ -517,21 +646,21 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Met à jour la main du joueur
+     * Update the player's hand display
      */
     private void updatePlayerHand() {
-        // Vider la main actuelle
+        // Clear current hand
         playerCards.clear();
         JPanel cardsPanel = (JPanel) playerPanel.getComponent().getComponent(1);
         cardsPanel.removeAll();
         
-        // Récupérer les cartes du joueur courant
+        // Get current player's cards
         Player humanPlayer = getHumanPlayer();
         if (humanPlayer != null) {
             for (Card card : humanPlayer.getHand()) {
                 DUnoCard unoCard = new DUnoCard(card);
                 
-                // Ajouter un écouteur de clic pour la sélection de carte
+                // Add click listener for card selection
                 unoCard.setClickListener(e -> {
                     if (selectedCard != null) {
                         selectedCard.setSelected(false);
@@ -550,7 +679,7 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Retire une carte de la main du joueur
+     * Remove a card from player's hand
      */
     private void removeCardFromPlayerHand(DUnoCard card) {
         JPanel cardsPanel = (JPanel) playerPanel.getComponent().getComponent(1);
@@ -559,33 +688,393 @@ public class DWoodGamePanel extends DWoodPanel {
         cardsPanel.revalidate();
         cardsPanel.repaint();
         
-        // Réinitialiser la sélection
+        // Reset selection
         selectedCard = null;
     }
     
     /**
-     * Met à jour les mains des joueurs IA
+     * Update the AI players' hands display
      */
     private void updateAIPlayersHands() {
-        // TODO: Mettre à jour les cartes des joueurs IA
-    }
-    
-    /**
-     * Met à jour l'indicateur de tour
-     */
-    private void updateTurnIndicator() {
-        if (isPlayerTurn()) {
-            turnIndicator.setText("C'est à vous de jouer!");
-            turnIndicator.setForeground(Color.WHITE);
-        } else {
-            String playerName = game.getCurrentPlayer().getName();
-            turnIndicator.setText("Tour de " + playerName);
-            turnIndicator.setForeground(Color.YELLOW);
+        // For each AI player
+        for (Player player : game.getPlayers()) {
+            if (player.isAI()) {
+                String playerName = player.getName();
+                DPanel playerPanel = playerPanels.get(playerName);
+                
+                if (playerPanel != null) {
+                    // Get proper container for cards based on panel orientation
+                    JPanel cardsContainer = null;
+                    
+                    if (playerPanel == topPlayerPanel) {
+                        // Top player panel has cards in second component
+                        cardsContainer = (JPanel) playerPanel.getComponent().getComponent(1);
+                    } else {
+                        // Side panels have more complex structure
+                        JPanel verticalPanel = (JPanel) playerPanel.getComponent().getComponent(0);
+                        cardsContainer = (JPanel) verticalPanel.getComponent(1);
+                    }
+                    
+                    // Clear current cards
+                    cardsContainer.removeAll();
+                    
+                    // Add face-down cards for each card in player's hand
+                    for (int i = 0; i < player.getHandSize(); i++) {
+                        DUnoCard card = new DUnoCard(new Card(CardColor.WILD, CardValue.WILD));
+                        card.setFaceUp(false);
+                        
+                        if (playerPanel == topPlayerPanel || playerPanel == leftPlayerPanel || playerPanel == rightPlayerPanel) {
+                            // For top player, add cards horizontally with overlap
+                            if (playerPanel == topPlayerPanel) {
+                                cardsContainer.add(card.getComponent());
+                            } else {
+                                // For side players, add cards vertically with overlap
+                                JPanel cardHolder = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, -15));
+                                cardHolder.setOpaque(false);
+                                cardHolder.add(card.getComponent());
+                                cardsContainer.add(cardHolder);
+                            }
+                        }
+                    }
+                    
+                    cardsContainer.revalidate();
+                    cardsContainer.repaint();
+                }
+            }
         }
     }
     
     /**
-     * Vérifie si c'est le tour du joueur humain
+     * Update the turn indicator
+     */
+    private void updateTurnIndicator() {
+        if (isPlayerTurn()) {
+            turnIndicator.setText("It's your turn!");
+            turnIndicator.setForeground(Color.WHITE);
+            
+            // Enable player controls
+            drawButton.setEnabled(true);
+            playButton.setEnabled(true);
+            unoButton.setEnabled(true);
+        } else {
+            Player currentPlayer = game.getCurrentPlayer();
+            if (currentPlayer != null) {
+                turnIndicator.setText(currentPlayer.getName() + "'s turn");
+                turnIndicator.setForeground(Color.YELLOW);
+                
+                // Disable player controls during AI turns
+                drawButton.setEnabled(false);
+                playButton.setEnabled(false);
+                unoButton.setEnabled(false);
+                
+                // Process AI turn with a delay - using a single timer to prevent overlapping
+                // Each AI player will wait for their turn
+                Timer timer = new Timer(1000, e -> {
+                    playAITurn(currentPlayer);
+                    ((Timer)e.getSource()).stop();
+                });
+                timer.setRepeats(false);
+                timer.start();
+            }
+        }
+    }
+    
+    // Flag to prevent multiple AI turns processing at once
+    private boolean processingAITurn = false;
+    
+    /**
+     * Play a turn for an AI player
+     */
+    private void playAITurn(Player aiPlayer) {
+        if (game.isGameEnded() || processingAITurn) return;
+        
+        // Set the flag to prevent other AI turns from starting
+        processingAITurn = true;
+        
+        try {
+            // Find a playable card
+            Card playableCard = null;
+            for (Card card : aiPlayer.getHand()) {
+                if (card.canPlayOn(game.getTopCard())) {
+                    playableCard = card;
+                    // Preference for non-wild cards if available
+                    if (!card.isWild()) {
+                        break;
+                    }
+                }
+            }
+            
+            // If AI has a playable card
+            if (playableCard != null) {
+                // For wild cards, select a random color
+                if (playableCard.isWild()) {
+                    CardColor[] colors = {CardColor.RED, CardColor.BLUE, CardColor.GREEN, CardColor.YELLOW};
+                    CardColor selectedColor = colors[(int)(Math.random() * 4)];
+                    playableCard.setChosenColor(selectedColor);
+                    // Also set the actual color for correct display
+                    playableCard.setColor(selectedColor);
+                }
+                
+                // UNO call if this is the next-to-last card
+                if (aiPlayer.getHandSize() == 2) {
+                    aiPlayer.callUno();
+                    showMessage(aiPlayer.getName() + " called UNO!");
+                    playSound("uno_call");
+                }
+                
+                // Play the card
+                final Card cardToPlay = playableCard;
+                
+                // Show animation
+                animateAICardPlay(aiPlayer, () -> {
+                    game.playCard(cardToPlay);
+                    updateTopCard();
+                    updateAIPlayersHands();
+                    playSound("card_place");
+                    
+                    // Win condition
+                    if (aiPlayer.getHandSize() == 0) {
+                        showMessage(aiPlayer.getName() + " wins!");
+                        playSound("game_win");
+                        processingAITurn = false;
+                        return;
+                    }
+                    
+                    // Next player
+                    game.advanceToNextPlayer();
+                    
+                    // Now that animation is complete, release the flag and update turn
+                    processingAITurn = false;
+                    updateTurnIndicator();
+                });
+            } else {
+                // AI has no playable card, draw one
+                showMessage(aiPlayer.getName() + " draws a card");
+                
+                // Animate drawing
+                animateAICardDraw(aiPlayer, () -> {
+                    Card drawnCard = game.drawCard(aiPlayer);
+                    updateAIPlayersHands();
+                    playSound("card_draw");
+                    
+                    // Check if drawn card can be played
+                    if (drawnCard != null && drawnCard.canPlayOn(game.getTopCard())) {
+                        // For wild cards, select a random color
+                        if (drawnCard.isWild()) {
+                            CardColor[] colors = {CardColor.RED, CardColor.BLUE, CardColor.GREEN, CardColor.YELLOW};
+                            CardColor selectedColor = colors[(int)(Math.random() * 4)];
+                            drawnCard.setChosenColor(selectedColor);
+                            // Also set the actual color for correct display
+                            drawnCard.setColor(selectedColor);
+                        }
+                        
+                        // Delay a bit then play the drawn card
+                        Timer timer = new Timer(500, e -> {
+                            showMessage(aiPlayer.getName() + " plays drawn card");
+                            game.playCard(drawnCard);
+                            updateTopCard();
+                            updateAIPlayersHands();
+                            playSound("card_place");
+                            
+                            // Win condition
+                            if (aiPlayer.getHandSize() == 0) {
+                                showMessage(aiPlayer.getName() + " wins!");
+                                playSound("game_win");
+                                processingAITurn = false;
+                                return;
+                            }
+                            
+                            // Next player
+                            game.advanceToNextPlayer();
+                            
+                            // Now that animation is complete, release the flag and update turn
+                            processingAITurn = false;
+                            updateTurnIndicator();
+                            ((Timer)e.getSource()).stop();
+                        });
+                        timer.setRepeats(false);
+                        timer.start();
+                    } else {
+                        // Next player
+                        game.advanceToNextPlayer();
+                        
+                        // Now that animation is complete, release the flag and update turn
+                        processingAITurn = false;
+                        updateTurnIndicator();
+                    }
+                });
+            }
+        } catch (Exception e) {
+            // In case of an error, make sure we release the flag
+            processingAITurn = false;
+            System.err.println("Error processing AI turn: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Move to next player if there was an error
+            game.advanceToNextPlayer();
+            updateTurnIndicator();
+        }
+    }
+    
+    /**
+     * Animate AI player drawing a card
+     */
+    private void animateAICardDraw(Player aiPlayer, Runnable onComplete) {
+        // Get positions
+        Point deckPos = getComponentScreenPosition(deckCard);
+        
+        // Create a temporary card for animation - using fixed size to avoid too large cards
+        DUnoCard animCard = new DUnoCard(new Card(CardColor.WILD, CardValue.WILD));
+        animCard.setFaceUp(false);
+        ((JPanel)centerPanel.getComponent()).add(animCard.getComponent());
+        
+        // Position at deck location with consistent size
+        int cardWidth = 80;  // Fixed card width
+        int cardHeight = 120; // Fixed card height
+        animCard.getComponent().setBounds(deckPos.x, deckPos.y, cardWidth, cardHeight);
+        
+        // Find target position based on AI player
+        Point endPos = new Point();
+        
+        // Determine which player panel to use
+        String playerName = aiPlayer.getName();
+        DPanel playerPanel = playerPanels.get(playerName);
+        
+        if (playerPanel == topPlayerPanel) {
+            // Top player
+            endPos.x = topPlayerPanel.getX() + topPlayerPanel.getWidth() / 2;
+            endPos.y = topPlayerPanel.getY() + 50;
+        } else if (playerPanel == leftPlayerPanel) {
+            // Left player
+            endPos.x = leftPlayerPanel.getX() + 50;
+            endPos.y = leftPlayerPanel.getY() + leftPlayerPanel.getHeight() / 2;
+        } else if (playerPanel == rightPlayerPanel) {
+            // Right player
+            endPos.x = rightPlayerPanel.getX() + 50;
+            endPos.y = rightPlayerPanel.getY() + rightPlayerPanel.getHeight() / 2;
+        }
+        
+        // Animation timer
+        Timer timer = new Timer(16, null);
+        final int steps = ANIMATION_DURATION / 16;
+        final int[] step = {0};
+        
+        timer.addActionListener(e -> {
+            step[0]++;
+            float progress = (float)step[0] / steps;
+            
+            // Apply easing
+            float easedProgress = easeOutQuad(progress);
+            
+            // Update position
+            int x = deckPos.x + (int)((endPos.x - deckPos.x) * easedProgress);
+            int y = deckPos.y + (int)((endPos.y - deckPos.y) * easedProgress);
+            animCard.getComponent().setLocation(x, y);
+            
+            // Animation complete
+            if (step[0] >= steps) {
+                ((Timer)e.getSource()).stop();
+                
+                // Remove animation card
+                ((JPanel)centerPanel.getComponent()).remove(animCard.getComponent());
+                centerPanel.revalidate();
+                centerPanel.repaint();
+                
+                // Run completion action
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            }
+        });
+        
+        timer.start();
+    }
+    
+    /**
+     * Animate AI player playing a card
+     */
+    private void animateAICardPlay(Player aiPlayer, Runnable onComplete) {
+        // Find start position based on AI player
+        Point startPos = new Point();
+        Point endPos = getComponentScreenPosition(topCard);
+        
+        // Determine which player panel to use
+        String playerName = aiPlayer.getName();
+        DPanel playerPanel = playerPanels.get(playerName);
+        
+        if (playerPanel == topPlayerPanel) {
+            // Top player
+            startPos.x = topPlayerPanel.getX() + topPlayerPanel.getWidth() / 2;
+            startPos.y = topPlayerPanel.getY() + 50;
+        } else if (playerPanel == leftPlayerPanel) {
+            // Left player
+            startPos.x = leftPlayerPanel.getX() + 50;
+            startPos.y = leftPlayerPanel.getY() + leftPlayerPanel.getHeight() / 2;
+        } else if (playerPanel == rightPlayerPanel) {
+            // Right player
+            startPos.x = rightPlayerPanel.getX() + 50;
+            startPos.y = rightPlayerPanel.getY() + rightPlayerPanel.getHeight() / 2;
+        }
+        
+        // Create a temporary card for animation - using fixed size for consistency
+        DUnoCard animCard = new DUnoCard(new Card(CardColor.WILD, CardValue.WILD));
+        animCard.setFaceUp(false);
+        ((JPanel)centerPanel.getComponent()).add(animCard.getComponent());
+        
+        // Position at start location with consistent size
+        int cardWidth = 80;  // Fixed card width
+        int cardHeight = 120; // Fixed card height
+        animCard.getComponent().setBounds(startPos.x, startPos.y, cardWidth, cardHeight);
+        
+        // Animation timer
+        Timer timer = new Timer(16, null);
+        final int steps = ANIMATION_DURATION / 16;
+        final int[] step = {0};
+        
+        timer.addActionListener(e -> {
+            step[0]++;
+            float progress = (float)step[0] / steps;
+            
+            // Apply easing
+            float easedProgress = easeOutQuad(progress);
+            
+            // Flip card halfway
+            if (step[0] == steps / 2) {
+                animCard.setFaceUp(true);
+            }
+            
+            // Calculate position with arc
+            int x = startPos.x + (int)((endPos.x - startPos.x) * easedProgress);
+            
+            // Add arc to y-movement
+            float arcHeight = 50;
+            float arcProgress = (float)(Math.sin(Math.PI * easedProgress));
+            int y = startPos.y + (int)((endPos.y - startPos.y) * easedProgress - arcHeight * arcProgress);
+            
+            // Update position
+            animCard.getComponent().setLocation(x, y);
+            
+            // Animation complete
+            if (step[0] >= steps) {
+                ((Timer)e.getSource()).stop();
+                
+                // Remove animation card
+                ((JPanel)centerPanel.getComponent()).remove(animCard.getComponent());
+                centerPanel.revalidate();
+                centerPanel.repaint();
+                
+                // Run completion action
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            }
+        });
+        
+        timer.start();
+    }
+    
+    /**
+     * Check if it's the human player's turn
      */
     private boolean isPlayerTurn() {
         Player currentPlayer = game.getCurrentPlayer();
@@ -593,7 +1082,7 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Récupère le joueur humain
+     * Get the human player
      */
     private Player getHumanPlayer() {
         for (Player player : game.getPlayers()) {
@@ -605,44 +1094,34 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Affiche un message dans la zone de statut
+     * Show a message in the status area
      */
     private void showMessage(String message) {
         gameStatus.setText(message);
         
-        // Créer un timer pour effacer le message après quelques secondes
-        new javax.swing.Timer(5000, e -> {
+        // Create a timer to clear the message after a delay
+        Timer timer = new Timer(5000, e -> {
             gameStatus.setText("");
-            ((javax.swing.Timer) e.getSource()).stop();
-        }).start();
+            ((Timer) e.getSource()).stop();
+        });
+        timer.setRepeats(false);
+        timer.start();
     }
     
     /**
-     * Initialise le jeu avec les joueurs
+     * Initialize the game
      */
     public void initializeGame(String playerName, int aiPlayerCount) {
-        // Ajouter le joueur humain
-        Player humanPlayer = new Player(playerName, false);
-        game.addPlayer(humanPlayer);
-        
-        // Ajouter les joueurs IA
-        String[] aiNames = {"Nord", "Est", "Ouest", "Sud"};
-        for (int i = 0; i < Math.min(aiPlayerCount, aiNames.length); i++) {
-            Player aiPlayer = new Player(aiNames[i], true);
-            game.addPlayer(aiPlayer);
-        }
-        
-        // Mettre à jour l'interface
         updatePlayerHand();
         updateAIPlayersHands();
         updateTurnIndicator();
     }
     
     /**
-     * Démarre le jeu
+     * Start the game
      */
     public void startGame() {
-        game.startGame();
+        showMessage("Game started!");
         updatePlayerHand();
         updateAIPlayersHands();
         updateTopCard();
@@ -651,80 +1130,87 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Met à jour l'interface quand le jeu commence
+     * Game event handler class
      */
-    public void onGameStarted() {
-        // Mise à jour de l'interface quand le jeu commence
-        updatePlayerHand();
-        updateTopCard();
-        updateTurnIndicator();
-        showMessage("La partie commence!");
-    }
-    
-    /**
-     * Met à jour l'interface quand le tour change
-     */
-    public void onPlayerTurnChanged(Player player) {
-        // Mise à jour de l'interface quand le tour change
-        updateTurnIndicator();
-    }
-    
-    /**
-     * Met à jour l'interface quand une carte est jouée
-     */
-    public void onCardPlayed(Player player, Card card) {
-        // Mise à jour de l'interface quand une carte est jouée
-        updateTopCard();
+    private class GameEventHandler implements Game.GameEventListener {
         
-        // Afficher un message approprié
-        String cardDesc = card.getColor() + " " + card.getValue();
-        if (player.isAI()) {
-            showMessage(player.getName() + " a joué " + cardDesc);
-        } else {
-            showMessage("Vous avez joué " + cardDesc);
+        @Override
+        public void onGameStarted(Game game) {
+            updateStatusMessage("Game started!");
+            updateUI();
+        }
+        
+        @Override
+        public void onGameEnded(Game game, Player winner) {
+            updateStatusMessage("Game over! " + winner.getName() + " wins!");
+            updateUI();
+        }
+        
+        @Override
+        public void onPlayerTurn(Game game, Player player) {
+            updateTurnIndicator();
+            updateStatusMessage("It's " + player.getName() + "'s turn");
+            updateUI();
+        }
+        
+        @Override
+        public void onPlayerSkipped(Game game, Player player) {
+            updateStatusMessage(player.getName() + " skips a turn!");
+            updateUI();
+        }
+        
+        @Override
+        public void onDirectionChanged(Game game, boolean isClockwise) {
+            updateStatusMessage("Direction changed!");
+            updateUI();
+        }
+        
+        @Override
+        public void onPlayerDrewCards(Game game, Player player, int count) {
+            updateStatusMessage(player.getName() + " draws " + count + " cards");
+            updateUI();
+        }
+        
+        @Override
+        public void onDeckReshuffled(Game game) {
+            updateStatusMessage("The deck has been reshuffled");
+            updateUI();
+        }
+        
+        @Override
+        public void onPlayerCalledUno(Game game, Player player) {
+            updateStatusMessage(player.getName() + " called UNO!");
+            updateUI();
+        }
+        
+        @Override
+        public void onPlayerForgotUno(Game game, Player player) {
+            updateStatusMessage(player.getName() + " forgot to call UNO and draws 2 cards!");
+            updateUI();
+        }
+        
+        @Override
+        public void onColorChanged(Game game, CardColor color) {
+            updateStatusMessage("Color changed to: " + getColorName(color));
+            updateTopCard();
+            updateUI();
+        }
+        
+        @Override
+        public void onWildDrawFourChallengeSucceeded(Game game, Player challenger, Player challenged) {
+            updateStatusMessage(challenger.getName() + " successfully challenged " + challenged.getName() + "'s +4!");
+            updateUI();
+        }
+        
+        @Override
+        public void onWildDrawFourChallengeFailed(Game game, Player challenger, Player challenged) {
+            updateStatusMessage(challenger.getName() + " failed to challenge " + challenged.getName() + "'s +4!");
+            updateUI();
         }
     }
     
     /**
-     * Met à jour l'interface quand une carte est piochée
-     */
-    public void onCardDrawn(Player player, Card card) {
-        // Mise à jour de l'interface quand une carte est piochée
-        if (player.isAI()) {
-            showMessage(player.getName() + " a pioché une carte");
-            // TODO: Mettre à jour la main du joueur IA
-        } else {
-            updatePlayerHand();
-            showMessage("Vous avez pioché une carte");
-        }
-    }
-    
-    /**
-     * Met à jour l'interface quand un joueur appelle UNO
-     */
-    public void onUnoCalledByPlayer(Player player) {
-        // Mise à jour de l'interface quand un joueur appelle UNO
-        if (player.isAI()) {
-            showMessage(player.getName() + " a appelé UNO!");
-        } else {
-            showMessage("Vous avez appelé UNO!");
-        }
-    }
-    
-    /**
-     * Met à jour l'interface quand le jeu se termine
-     */
-    public void onGameEnded(Player winner) {
-        // Mise à jour de l'interface quand le jeu se termine
-        if (winner.isAI()) {
-            showMessage(winner.getName() + " a gagné la partie!");
-        } else {
-            showMessage("Félicitations! Vous avez gagné la partie!");
-        }
-    }
-    
-    /**
-     * Met à jour le message de statut
+     * Update status message
      */
     private void updateStatusMessage(String message) {
         if (gameStatus != null) {
@@ -734,7 +1220,7 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Met à jour l'interface utilisateur
+     * Update all UI elements
      */
     private void updateUI() {
         updatePlayerHand();
@@ -745,96 +1231,16 @@ public class DWoodGamePanel extends DWoodPanel {
     }
     
     /**
-     * Retourne le nom lisible d'une couleur
+     * Get readable color name
      */
     private String getColorName(CardColor color) {
         switch (color) {
-            case RED: return "Rouge";
-            case BLUE: return "Bleu";
-            case GREEN: return "Vert";
-            case YELLOW: return "Jaune";
-            case WILD: return "Multicolore";
-            default: return "Inconnu";
-        }
-    }
-    
-    /**
-     * Classe interne pour gérer les événements du jeu
-     */
-    private class GameEventHandler implements Game.GameEventListener {
-        
-        @Override
-        public void onGameStarted(Game game) {
-            updateStatusMessage("La partie commence!");
-            updateUI();
-        }
-        
-        @Override
-        public void onGameEnded(Game game, Player winner) {
-            updateStatusMessage("La partie est terminée! " + winner.getName() + " a gagné!");
-            updateUI();
-        }
-        
-        @Override
-        public void onPlayerTurn(Game game, Player player) {
-            updateTurnIndicator();
-            updateStatusMessage("C'est au tour de " + player.getName());
-            updateUI();
-        }
-        
-        @Override
-        public void onPlayerSkipped(Game game, Player player) {
-            updateStatusMessage(player.getName() + " passe son tour!");
-            updateUI();
-        }
-        
-        @Override
-        public void onDirectionChanged(Game game, boolean isClockwise) {
-            updateStatusMessage("Changement de direction!");
-            updateUI();
-        }
-        
-        @Override
-        public void onPlayerDrewCards(Game game, Player player, int count) {
-            updateStatusMessage(player.getName() + " pioche " + count + " cartes");
-            updateUI();
-        }
-        
-        @Override
-        public void onDeckReshuffled(Game game) {
-            updateStatusMessage("Le deck a été remélangé");
-            updateUI();
-        }
-        
-        @Override
-        public void onPlayerCalledUno(Game game, Player player) {
-            updateStatusMessage(player.getName() + " a appelé UNO!");
-            updateUI();
-        }
-        
-        @Override
-        public void onPlayerForgotUno(Game game, Player player) {
-            updateStatusMessage(player.getName() + " a oublié d'appeler UNO et pioche 2 cartes!");
-            updateUI();
-        }
-        
-        @Override
-        public void onColorChanged(Game game, CardColor color) {
-            updateStatusMessage("La couleur change pour: " + getColorName(color));
-            updateTopCard();
-            updateUI();
-        }
-        
-        @Override
-        public void onWildDrawFourChallengeSucceeded(Game game, Player challenger, Player challenged) {
-            updateStatusMessage(challenger.getName() + " a contesté avec succès le +4 de " + challenged.getName() + "!");
-            updateUI();
-        }
-        
-        @Override
-        public void onWildDrawFourChallengeFailed(Game game, Player challenger, Player challenged) {
-            updateStatusMessage(challenger.getName() + " a échoué à contester le +4 de " + challenged.getName() + "!");
-            updateUI();
+            case RED: return "Red";
+            case BLUE: return "Blue";
+            case GREEN: return "Green";
+            case YELLOW: return "Yellow";
+            case WILD: return "Wild";
+            default: return "Unknown";
         }
     }
 }

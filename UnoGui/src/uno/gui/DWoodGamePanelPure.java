@@ -632,9 +632,7 @@ public class DWoodGamePanelPure extends DWoodPanel {
     /**
      * Définit la bordure du panneau
      */
-    private void setBorder(int top, int left, int bottom, int right) {
-        // Méthode de compatibilité
-    }
+
     
     /**
      * Affiche un message

@@ -5,116 +5,113 @@ import dgui.DFocusTraversalPolicy;
 import dgui.themes.DTheme;
 import uno.core.Game;
 import uno.core.Player;
-import uno.gui.DWoodGamePanelPure;
+import uno.gui.DWoodGamePanel;
 import uno.gui.SoundManager;
 
 /**
- * Jeu UNO complet avec une interface graphique en bois
- * Cette version utilise exclusivement dgui sans dépendances Swing
- * et respecte toutes les règles du jeu UNO original.
+ * Enhanced UNO game with wood-themed graphics and improved UI
+ * Fixed layout issues and enhanced appearance
  */
 public class UnoCompleteDGUI {
     
-    // Taille de la fenêtre du jeu
+    // Game window size
     private static final int WINDOW_WIDTH = 1024;
     private static final int WINDOW_HEIGHT = 768;
     
-    // La fenêtre principale
+    // Main frame
     private DFrame frame;
     
-    // Le jeu et son panneau
+    // Game and its panel
     private Game game;
-    private DWoodGamePanelPure gamePanel;
+    private DWoodGamePanel gamePanel;
     
-    // Le gestionnaire de sons
+    // Sound manager
     private SoundManager soundManager;
     
     /**
-     * Constructeur
+     * Constructor
      */
     public UnoCompleteDGUI() {
-        // Pas besoin d'initialiser le thème, il est déjà disponible
-        
-        // Créer le jeu
+        // Create the game
         createGame();
         
-        // Créer l'interface graphique
+        // Create the GUI
         createGUI();
         
-        // Initialiser les sons
+        // Initialize sounds
         initSounds();
     }
     
     /**
-     * Initialise le jeu et les joueurs
+     * Initialize the game and players
      */
     private void createGame() {
         game = new Game();
         
-        // Ajouter des joueurs
-        game.addPlayer(new Player("TheLegend27", false)); // Joueur humain
-        game.addPlayer(new Player("Daenerys Targaryen", true));  // IA
-        game.addPlayer(new Player("Forrest Gump", true));   // IA nord
-        game.addPlayer(new Player("Hannibal Lecter", true)); // IA
+        // Add players
+        game.addPlayer(new Player("TheLegend27", false)); // Human player
+        game.addPlayer(new Player("Daenerys Targaryen", true));  // AI player
+        game.addPlayer(new Player("Forrest Gump", true));   // AI North
+        game.addPlayer(new Player("Hannibal Lecter", true)); // AI player
     }
     
     /**
-     * Crée l'interface graphique
+     * Create the GUI
      */
     private void createGUI() {
-        // Créer la fenêtre
-        frame = new DFrame("UNO - Version Deluxe");
+        // Create the window
+        frame = new DFrame("UNO - Deluxe Edition");
         frame.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
         frame.setResizable(true);
         
-        // Créer une politique de traversée de focus personnalisée
+        // Create a custom focus traversal policy
         DFocusTraversalPolicy focusPolicy = new DFocusTraversalPolicy();
         
-        // Créer le panneau de jeu
-        gamePanel = new DWoodGamePanelPure(game);
+        // Create the enhanced game panel
+        gamePanel = new DWoodGamePanel(game);
         
-        // Configurer la politique de traversée de focus
+        // Configure focus traversal policy
         frame.getComponent().setFocusTraversalPolicy(focusPolicy);
         frame.getComponent().setFocusTraversalPolicyProvider(true);
         
-        // Ajouter le panneau de jeu
+        // Add the game panel
         frame.getContentPane().add(gamePanel.getComponent());
         
-        // Configurer et afficher la fenêtre
+        // Configure and display window
         frame.centerOnScreen();
         frame.setVisible(true);
     }
     
     /**
-     * Initialise le gestionnaire de sons
+     * Initialize sound manager
      */
     private void initSounds() {
         try {
             soundManager = new SoundManager();
-            soundManager.setVolume(0.7f); // 70% du volume
+            soundManager.setVolume(0.7f); // 70% volume
         } catch (Exception e) {
-            System.err.println("Erreur lors de l'initialisation des sons: " + e.getMessage());
+            System.err.println("Error initializing sounds: " + e.getMessage());
         }
     }
     
     /**
-     * Démarrer le jeu
+     * Start the game
      */
     public void startGame() {
-        // Démarrer le jeu et distribuer les cartes
+        // Start the game and deal cards
         game.startGame();
         
-        // Jouer un son de début de partie
+        // Play game start sound
         if (soundManager != null) {
             soundManager.playSound("game_start");
         }
     }
     
     /**
-     * Point d'entrée du programme
+     * Program entry point
      */
     public static void main(String[] args) {
-        // Créer et démarrer le jeu
+        // Create and start game
         UnoCompleteDGUI game = new UnoCompleteDGUI();
         game.startGame();
     }
